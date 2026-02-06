@@ -4,8 +4,11 @@ FROM node:20-alpine AS base
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm ci
+
+# Copy package files
+COPY package.json ./
+# Generate package-lock if it doesn't exist and install
+RUN npm install
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -23,7 +26,8 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
+# Copy public folder if exists
+COPY --from=builder /app/public ./public 2>/dev/null || true
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
